@@ -1,0 +1,119 @@
+clc;
+a1 = 57.0; a2 = 22.0; a3 = 25.0; a4 = 44.5; a5 = 45.5;
+a6 = 132.5; a7 = 213.0; a8 = 45.5; a9 = 44.5; a10 = 55.0;
+a11 = 87.0; a12 = 10;
+
+Axis = [0.0, 0.0, 0.0, 1; 
+        a3, -a2, a1, 1;
+        a3 + a5, -a2 + a4, a1, 1;
+        a3 + a5 + a7, -a2 + a4 - a6, a1, 1;
+        a3 + a5 + a7 - a9, -a2 + a4 - a6 + a8, a1, 1;
+        a3 + a5 + a7 - a9 + a10, -a2 + a4 - a6 + a8 + a11, a1, 1;
+        a3 + a5 + a7 - a9 + a10 - a12, -a2 + a4 - a6 + a8 + a11, a1, 1];
+Links = [0, 0, 0, 1; %
+        0, 0, a1, 1;
+        0, -a2, a1, 1;
+        a3, -a2, a1, 1; %
+        a3, -a2 + a4, a1, 1;
+        a3 + a5, -a2 + a4, a1, 1; %
+        a3 + a5, -a2 + a4 - a6, a1, 1;
+        a3 + a5 + a7, -a2 + a4 - a6, a1, 1; %
+        a3 + a5 + a7, -a2 + a4 - a6 + a8, a1, 1;
+        a3 + a5 + a7 - a9, -a2 + a4 - a6 + a8, a1, 1; %
+        a3 + a5 + a7 - a9 + a10, -a2 + a4 - a6 + a8, a1, 1;
+        a3 + a5 + a7 - a9 + a10, -a2 + a4 - a6 + a8 + a11, a1, 1;
+        a3 + a5 + a7 - a9 + a10 - a12, -a2 + a4 - a6 + a8 + a11, a1, 1]; %
+
+% INITIAL CONDITIONS
+a0 = 25; %mm
+a2 = 132.5; %mm
+
+L2 = 45.5; %mm
+L4 = 45.5 + 87; %mm
+L5 = 10; %mm
+
+%Actuadores
+d0 = 57 + 0;% [57,107]
+d1 = 22.5 + 0;% [22.5,72.5]
+d3 = -168.5 + 50;% [-168.5,-118.5]
+% 
+th2 = 90;% [0,360]
+th4 = 90;% [-180,180]
+th5 = 0;% [0,360]
+
+
+d0 =77;% d0   
+d1 = 52.5;% d1
+d3 = -128.5;% d3
+th2 = 120;%theta2
+th4 = 110;%theta4
+th5 =70;%theta5
+
+DHt = [a0, -90, d0, 0;
+            0, -90, d1, -90;
+            a2, 180, L2, th2;
+            0, -90, d3, 90
+            0, -90, L4, th4;
+            0, 0, L5, th5];
+
+m = 6;
+
+% TRANSFORMATION MATRIXES
+HM = DH(DHt(1,:));
+HMac = DH(DHt(1,:));
+for i = 2:size(Axis,1)-1
+   HMac(:,(4*i)-3:4*i) = HMac(:,(4*(i-1))-3:4*(i-1))*DH(DHt(i,:));
+   HM(:,(4*i)-3:4*i) = DH(DHt(i,:));
+end
+
+Axisp(1,1:4) = [0, 0, 57, 1];
+for i = 1:m
+    Axisp(i+1,1:4) = HMac(:,4*i);
+end
+
+% Link 1, 2, 3
+Axist(1,1:4) = [0,0,0,1]';
+Axist(2,1:4) = [0,0,d0,1]';
+Axist(3,1:4) = [0,-22,d0,1]';
+Axist(4,1:4) = [25,-22,d0,1]';
+% Link 4, 5
+Axist(5,1:4) = [25, d1,d0,1]';
+Axist(6,1:4) = [25 + 45.5, d1, d0,1]';
+%Link 6, 7
+v = 3;
+Axist(7,1:4) = HMac(:,(4*v)-3:(4*v))*[0, 0, 0,1]';
+%Link 8, 9
+v = 4;
+Axist(8,1:4) = HMac(:,(4*v)-3:(4*v))*[ 0, 44.5, 0, 1]';
+Axist(9,1:4) = HMac(:,(4*v)-3:(4*v))*[0,44.5,45.5,1]';
+Axist(10,1:4) = HMac(:,(4*v)-3:(4*v))*[0,0,45.5,1]';
+%Link 10, 11
+v = 5;
+Axist(11,1:4) = HMac(:,(4*v)-3:(4*v))*[0,87,55,1]'; %Esta raro el signo
+Axist(12,1:4) = HMac(:,(4*v)-3:(4*v))*[0,0,55,1]';
+%Link 12
+v = 6;
+Axist(13,1:4) = HMac(:,(4*v)-3:(4*v))*[0,0, 55 - a12 - a12,1]';
+
+
+% PLOT
+plot3( -Axist(:,3), Axist(:,2), Axist(:,1),'r-', ...
+    -Axist(:,3), Axist(:,2),Axist(:,1),'r*', ...
+    -Axis(:,3),Axis(:,2),Axis(:,1),'b*', ...
+    -Links(:,3),Links(:,2),Links(:,1),'b')
+
+axis equal
+xlabel('x') 
+ylabel('y') 
+zlabel('z')
+axis off
+
+
+function [dh] = DH(param)
+    a = param(1); alpha = param(2); d = param(3); theta = param(4);
+    dh = [cosd(theta), -sind(theta)*cosd(alpha), sind(theta)*sind(alpha), a*cosd(theta);
+            sind(theta), cosd(theta)*cosd(alpha), -cosd(theta)*sind(alpha), a*sind(theta);
+            0, sind(alpha), cosd(alpha), d;
+            0, 0, 0, 1];
+
+end
